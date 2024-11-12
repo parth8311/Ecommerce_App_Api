@@ -9,10 +9,13 @@ const {
 } = require("./auth-api/utils/hashPassword");
 const { generateToken } = require("./auth-api/utils/tokenService");
 const productRoutes = require("./auth-api/routes/productRoutes");
-// const cartRoutes = require("./auth-api/routes/cartRoutes");
-// const orderRoutes = require("./auth-api/routes/orderRoutes");
+const cartRoutes = require("./auth-api/routes/cartRoutes");
+const orderRoutes = require("./auth-api/routes/orderRoutes");
+const inventoryRoutes = require("./auth-api/routes/inventoryRoutes");
 const userRoutes = require("./auth-api/routes/userRoutes");
-
+const reviewRoutes = require("./auth-api/routes/reviewRoutes");
+const wishlistRoutes = require("./auth-api/routes/wishlistRoutes");
+const productSearch = require("./auth-api/routes/productSearchRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -22,12 +25,16 @@ connectDB();
 // Middleware
 app.use(express.json());
 app.use("/api/products", productRoutes);
-// app.use("/api/cart", cartRoutes);
+app.use("/api/cart", cartRoutes);
 
 // Authentication routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
-// app.use("/api/orders", orderRoutes);
+app.use("/api/inventory", inventoryRoutes); // Add the routes for inventory
+app.use("/api/orders", orderRoutes);
+app.use("/api/review", reviewRoutes); // Add the routes for reviews
+app.use("/api/wishlist", wishlistRoutes); // Add the routes for wishlist
+app.use("/api/search", productSearch); // Add the routes for product search
 
 // Password hashing and comparison endpoints
 app.post("/hash-password", async (req, res) => {

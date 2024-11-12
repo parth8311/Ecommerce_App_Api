@@ -1,28 +1,36 @@
 const mongoose = require("mongoose");
 
-const addressSchema = new mongoose.Schema({
-  street: String,
-  city: String,
-  state: String,
-  zip: String,
-  country: String,
-});
-
-const orderSchema = new mongoose.Schema({
-  orderId: String,
-  product: String,
-  quantity: Number,
-  price: Number,
-  orderDate: { type: Date, default: Date.now },
-});
-
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: true },
   password: { type: String, required: true },
-  tokens: [{ token: String }], // To store tokens if using JWT token array
-  savedAddresses: [addressSchema],
-  orderHistory: [orderSchema],
+  savedAddresses: [
+    {
+      street: String,
+      city: String,
+      state: String,
+      zip: String,
+      country: String,
+    },
+  ],
+  orderHistory: [
+    {
+      orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order" },
+      date: { type: Date, default: Date.now },
+      status: String,
+      totalAmount: Number,
+      items: [
+        {
+          productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+          quantity: Number,
+          price: Number,
+        },
+      ],
+    },
+  ],
 });
 
-module.exports = mongoose.models.User || mongoose.model("User", userSchema);
+// Ensure that the model is compiled correctly
+const User = mongoose.models.User || mongoose.model("User", userSchema);
+
+module.exports = User;

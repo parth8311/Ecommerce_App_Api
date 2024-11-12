@@ -67,7 +67,7 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// Login User
+// Adjusting token generation to expire after one week (7 days)
 exports.loginUser = async (req, res) => {
   const { email, password } = req.body;
 
@@ -78,29 +78,31 @@ exports.loginUser = async (req, res) => {
   }
 
   try {
-    // Find the user by email
-    const preuser = await User.findOne({ email: email });
+    const preuser = await User.findOne({ email });
 
     if (!preuser) {
       return res.status(400).json({ error: "User not found with this email" });
     }
 
-    // Check if the password matches
     const isMatch = await bcrypt.compare(password, preuser.password);
 
     if (!isMatch) {
       return res.status(400).json({ error: "Invalid password" });
     }
 
-    // Generate JWT token
-    const token = await preuser.generateAuthToken();
+    // Generate JWT token with 1 week expiration
+    const token = jwt.sign(
+      { _id: preuser._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" } // Set token to expire after 7 days
+    );
 
     res.status(200).json({
       message: "User Login Successfully",
       userToken: token,
     });
   } catch (error) {
-    console.log(error); // Log the error for better visibility
+    console.log(error);
     res.status(500).json({ error: "Server Error", details: error.message });
   }
 };

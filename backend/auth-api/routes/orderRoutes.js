@@ -1,12 +1,21 @@
 const express = require("express");
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
-const orderController = require("../controllers/orderController");
-const authMiddleware = require("../middleware/authMiddleware"); // Ensure the user is authenticated
+const {
+  placeOrder,
+  acceptOrder,
+  cancelOrder,
+  trackOrder,
+  confirmDelivery,
+  returnOrder,
+} = require("../controllers/orderController");
 
-// Get order history
-router.get("/history", authMiddleware, orderController.getOrderHistory);
-
-// Checkout process
-router.post("/checkout", authMiddleware, orderController.checkout);
+router.post("/place", authMiddleware, placeOrder);
+router.put("/:orderId/accept", acceptOrder);
+router.put("/:orderId/cancel", cancelOrder);
+router.get("/:orderId/track", trackOrder);
+router.put("/:orderId/delivered", confirmDelivery);
+router.put("/:orderId/return", returnOrder);
 
 module.exports = router;

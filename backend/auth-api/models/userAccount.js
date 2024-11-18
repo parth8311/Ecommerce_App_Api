@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
       date: { type: Date, default: Date.now },
       status: String,
       totalAmount: Number,
+      paymentMethod: String, // Include the payment method in the history
       items: [
         {
           productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },

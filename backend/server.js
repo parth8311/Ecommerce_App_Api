@@ -16,6 +16,8 @@ const userRoutes = require("./auth-api/routes/userRoutes");
 const reviewRoutes = require("./auth-api/routes/reviewRoutes");
 const wishlistRoutes = require("./auth-api/routes/wishlistRoutes");
 const productSearch = require("./auth-api/routes/productSearchRoutes");
+const priceFilterRoutes = require("./auth-api/routes/priceFilterRoutes");
+const recommendationRoutes = require("./auth-api/routes/recommendationRoutes");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -35,7 +37,8 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/review", reviewRoutes); // Add the routes for reviews
 app.use("/api/wishlist", wishlistRoutes); // Add the routes for wishlist
 app.use("/api/search", productSearch); // Add the routes for product search
-
+app.use("/api/price-filter", priceFilterRoutes); // Add the routes for price filter
+app.use("/api/recommendation", recommendationRoutes); // Add the routes for product search
 // Password hashing and comparison endpoints
 app.post("/hash-password", async (req, res) => {
   const { password } = req.body;

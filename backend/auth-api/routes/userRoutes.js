@@ -15,5 +15,7 @@ router.get(
   authMiddleware,
   userController.getOrderHistory
 );
+// Update order status (admin or user depending on your logic)
+router.put("/update-status", userController.updateOrderStatus);
 
 module.exports = router;

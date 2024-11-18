@@ -10,22 +10,51 @@ exports.addToCart = async (req, res) => {
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
 
+    // Define default tax rate (can be adjusted as per your business rules)
+    const taxRate = 0.1; // 10% tax
+
+    // Calculate the price with tax
+    const productPriceWithTax = product.price * quantity * (1 + taxRate);
+
     if (!cart) {
       cart = new Cart({
         userId,
-        items: [{ productId, quantity }],
-        totalPrice: product.price * quantity,
+        items: [
+          {
+            productId,
+            quantity,
+            category: product.category, // Add product category
+            image: product.image, // Add product image
+            taxAmount: product.price * quantity * taxRate, // Calculate tax
+            priceWithTax: productPriceWithTax, // Price including tax
+          },
+        ],
+        totalPrice: productPriceWithTax,
       });
     } else {
       const itemIndex = cart.items.findIndex(
         (item) => item.productId.toString() === productId
       );
       if (itemIndex > -1) {
+        // Update quantity, tax and price including tax
         cart.items[itemIndex].quantity += quantity;
+        cart.items[itemIndex].taxAmount =
+          product.price * cart.items[itemIndex].quantity * taxRate;
+        cart.items[itemIndex].priceWithTax =
+          product.price * cart.items[itemIndex].quantity * (1 + taxRate);
       } else {
-        cart.items.push({ productId, quantity });
+        // Add new item
+        cart.items.push({
+          productId,
+          quantity,
+          category: product.category, // Add product category
+          image: product.image, // Add product image
+          taxAmount: product.price * quantity * taxRate, // Calculate tax
+          priceWithTax: productPriceWithTax, // Price including tax
+        });
       }
-      cart.totalPrice += product.price * quantity;
+      // Update total price with tax
+      cart.totalPrice += productPriceWithTax;
     }
 
     await cart.save();
@@ -61,9 +90,15 @@ exports.updateCartItem = async (req, res) => {
 
     if (itemIndex > -1) {
       const product = await Product.findById(productId);
+      // Recalculate price with tax
+      const productPriceWithTax = product.price * quantity * (1 + 0.1); // Assuming 10% tax
       cart.totalPrice +=
-        (quantity - cart.items[itemIndex].quantity) * product.price;
+        productPriceWithTax - cart.items[itemIndex].priceWithTax;
+
       cart.items[itemIndex].quantity = quantity;
+      cart.items[itemIndex].priceWithTax = productPriceWithTax;
+      cart.items[itemIndex].taxAmount = product.price * quantity * 0.1; // Tax calculation
+
       await cart.save();
       res.json(cart);
     } else {
@@ -87,7 +122,8 @@ exports.removeCartItem = async (req, res) => {
 
     if (itemIndex > -1) {
       const product = await Product.findById(productId);
-      cart.totalPrice -= cart.items[itemIndex].quantity * product.price;
+      // Update total price
+      cart.totalPrice -= cart.items[itemIndex].priceWithTax;
       cart.items.splice(itemIndex, 1);
       await cart.save();
       res.json(cart);

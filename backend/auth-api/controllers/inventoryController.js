@@ -2,23 +2,23 @@ const Inventory = require("../models/Inventory");
 const Product = require("../models/Product"); // Assuming a Product model exists
 
 // Check if product is available (in stock)
+
 exports.checkProductAvailability = async (req, res) => {
   const { productId } = req.params;
 
   try {
-    const product = await Product.findById(productId);
+    const inventory = await Inventory.findOne({ productId }).populate(
+      "productId"
+    );
 
-    if (!product) {
-      return res.status(404).json({ error: "Product not found" });
+    if (!inventory) {
+      return res.status(404).json({ error: "Inventory entry not found" });
     }
 
-    // Check stock availability
-    const isAvailable = product.stock > 0;
-
     res.status(200).json({
-      isAvailable,
-      stock: product.stock,
-      availability: product.availability,
+      isAvailable: inventory.availability,
+      stock: inventory.stock,
+      productDetails: inventory.productId, // Includes product details if populated
     });
   } catch (error) {
     console.error("Error checking product availability:", error);
@@ -27,22 +27,31 @@ exports.checkProductAvailability = async (req, res) => {
 };
 
 // Get stock levels for a specific product
+
 exports.getProductStockLevel = async (req, res) => {
   const { productId } = req.params;
 
   try {
+    // Check if the product exists
     const product = await Product.findById(productId);
-
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
 
+    // Aggregate total stock from the inventory table
+    const totalStock = await Inventory.aggregate([
+      { $match: { productId: product._id } },
+      { $group: { _id: "$productId", totalStock: { $sum: "$stock" } } },
+    ]);
+
+    const stock = totalStock.length ? totalStock[0].totalStock : 0;
+
     res.status(200).json({
       productId: product._id,
-      stock: product.stock,
-      name: product.name,
+      totalStock: stock,
+      productName: product.name,
       price: product.price,
-      availability: product.availability,
+      availability: stock > 0,
     });
   } catch (error) {
     console.error("Error fetching product stock levels:", error);
@@ -51,6 +60,7 @@ exports.getProductStockLevel = async (req, res) => {
 };
 
 // Update stock levels (for restocking or reducing stock)
+
 exports.updateProductStock = async (req, res) => {
   const { productId, quantity } = req.body;
 
@@ -61,27 +71,40 @@ exports.updateProductStock = async (req, res) => {
   }
 
   try {
+    // Check if the product exists
     const product = await Product.findById(productId);
-
     if (!product) {
       return res.status(404).json({ error: "Product not found" });
     }
 
-    // Update stock and availability
-    product.stock += quantity;
-    product.availability = product.stock > 0;
+    // Create a new Inventory record for the transaction
+    const newInventoryRecord = new Inventory({
+      productId,
+      stock: quantity,
+      availability: quantity > 0, // True for additions, ignore for subtractions
+    });
 
-    // Only update averageRating if necessary, prevent setting to 0
-    if (product.averageRating === 0) {
-      product.averageRating = 1; // Set to minimum default or null, as preferred
-    }
+    await newInventoryRecord.save();
+
+    // Aggregate total stock from the inventory table
+    const totalStock = await Inventory.aggregate([
+      { $match: { productId: product._id } },
+      { $group: { _id: "$productId", totalStock: { $sum: "$stock" } } },
+    ]);
+
+    // Calculate the updated stock
+    const updatedStock = totalStock.length ? totalStock[0].totalStock : 0;
+
+    // Update product stock & availability
+    product.stock = updatedStock;
+    product.availability = updatedStock > 0;
 
     await product.save();
 
     res.status(200).json({
       message: "Product stock updated successfully",
-      stock: product.stock,
-      availability: product.availability,
+      totalStock: updatedStock,
+      inventoryRecord: newInventoryRecord,
     });
   } catch (error) {
     console.error("Error updating product stock:", error);
@@ -90,7 +113,6 @@ exports.updateProductStock = async (req, res) => {
       .json({ error: "Error updating product stock", details: error.message });
   }
 };
-
 // const Inventory = require("../models/Inventory");
 // const Product = require("../models/Product"); // If you want to fetch product details if necessary
 

@@ -81,8 +81,24 @@ const OrderSchema = new mongoose.Schema(
     totalAmount: Number,
     estimatedCost: Number,
     address: String,
-    paymentMethod: { type: String, enum: ["COD", "Online"], default: "COD" },
+    paymentMethod: {
+      type: String,
+      enum: [
+        "COD",
+        "Credit Card",
+        "Debit Card",
+        "PayPal",
+        "Paytm",
+        "GPay",
+        "UPI",
+      ],
+      required: true,
+    },
     shippingCost: Number,
+    distance: {
+      type: Number, // Distance for delivery
+      required: true,
+    },
     tax: Number,
     status: {
       type: String,
@@ -95,6 +111,10 @@ const OrderSchema = new mongoose.Schema(
         "Returned",
       ],
       default: "Pending",
+    },
+    paymentDetails: {
+      type: Map,
+      of: String, // Flexible structure to store card/UPI details
     },
     paymentStatus: {
       type: String,

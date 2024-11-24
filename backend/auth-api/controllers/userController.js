@@ -1,3 +1,5 @@
+
+const Order = require("../models/Order");
 const User = require("../models/userAccount");
 
 // Get user account information
@@ -47,21 +49,28 @@ exports.addAddress = async (req, res) => {
 // Get user order history
 exports.getOrderHistory = async (req, res) => {
   try {
-    // Fetch the user's order history and populate order details
-    const user = await User.findById(req.user.id).populate({
-      path: "orderHistory.orderId",
-      select: "status totalAmount items createdAt address paymentMethod",
+    console.log("Fetching order history for user ID:", req.user.id);
+
+    // Fetch the order history from the Order model
+    const orderHistory = await Order.find({ user: req.user.id })
+      .select("status totalAmount tax totalAmountWithTax items createdAt address paymentMethod")
+      .populate("items.productId", "name price");
+
+    // Map over order history and calculate total amount + tax if not already calculated
+    const enrichedOrderHistory = orderHistory.map((order) => {
+      const totalAmountWithTax = order.totalAmount + order.tax;
+      return {
+        ...order.toObject(),
+        totalAmountWithTax, // Add the combined total
+      };
     });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Send the populated order history
-    res.json({ orderHistory: user.orderHistory });
+    res.json({ orderHistory: enrichedOrderHistory });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Error fetching order history" });
+    console.error("Error fetching user order history:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching order history", error: error.message });
   }
 };
 
@@ -92,6 +101,11 @@ exports.updateOrderStatus = async (req, res) => {
     order.status = status;
     order.updatedAt = Date.now();
 
+    // Ensure the totalAmountWithTax is calculated correctly if it's not already
+    if (order.totalAmount && order.tax) {
+      order.totalAmountWithTax = order.totalAmount + order.tax;
+    }
+
     await order.save();
 
     // Update the user's orderHistory array
@@ -106,6 +120,9 @@ exports.updateOrderStatus = async (req, res) => {
     );
     if (orderHistoryIndex !== -1) {
       user.orderHistory[orderHistoryIndex].status = status;
+      user.orderHistory[orderHistoryIndex].totalAmount = order.totalAmount;
+      user.orderHistory[orderHistoryIndex].tax = order.tax;
+      user.orderHistory[orderHistoryIndex].totalAmountWithTax = order.totalAmountWithTax;
       user.orderHistory[orderHistoryIndex].paymentMethod = order.paymentMethod; // Add payment method to history if needed
       await user.save();
     }

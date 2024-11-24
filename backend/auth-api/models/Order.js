@@ -99,6 +99,7 @@ const OrderSchema = new mongoose.Schema(
       type: Number, // Distance for delivery
       required: true,
     },
+    totalAmountWithTax: { type: Number },
     tax: Number,
     status: {
       type: String,

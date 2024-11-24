@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
       date: { type: Date, default: Date.now },
       status: String,
       totalAmount: Number,
+      taxAmount: { type: Number, default: 0 }, // Tax amount field
       paymentMethod: String, // Include the payment method in the history
       items: [
         {

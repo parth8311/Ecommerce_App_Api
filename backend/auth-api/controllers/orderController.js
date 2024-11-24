@@ -17,92 +17,6 @@ function calculateEstimatedCost(items, shippingCost, taxRate) {
 function calculateShippingCost(distance) {
   return distance >= 5 && distance <= 50 ? 0 : 10;
 }
-// exports.placeOrder = async (req, res) => {
-//   const {
-//     items,
-//     totalAmount,
-//     address,
-//     paymentMethod,
-//     paymentDetails, // For card details or online payment options
-//     distance, // Distance in km passed from the request body
-//     taxRate = 0.1,
-//   } = req.body;
-
-//   try {
-//     // Validate payment details
-//     const errors = validatePayment(paymentMethod, paymentDetails);
-//     if (errors.length > 0) {
-//       return res
-//         .status(400)
-//         .json({ message: "Invalid payment details", errors });
-//     }
-//     const shippingCost = calculateShippingCost(distance);
-//     const estimatedCost = calculateEstimatedCost(items, shippingCost, taxRate);
-
-//     const newOrder = new Order({
-//       user: req.user.id, // This requires req.user to be populated
-//       items,
-//       totalAmount,
-//       estimatedCost,
-//       address,
-//       paymentMethod,
-//       paymentDetails, // For card details or online payment options
-//       shippingCost,
-//       tax: estimatedCost * taxRate,
-//       distance, // Save distance for reference
-//     });
-
-//     const order = await newOrder.save();
-//     res.status(201).json({ message: "Order placed successfully", order });
-//   } catch (error) {
-//     res
-//       .status(500)
-//       .json({ message: "Failed to place order", error: error.message });
-//   }
-// };
-
-// exports.placeOrder = async (req, res) => {
-//   const {
-//     items,
-//     totalAmount,
-//     address,
-//     paymentMethod,
-//     distance,
-//     taxRate = 0.1,
-//   } = req.body;
-
-//   try {
-//     const shippingCost = calculateShippingCost(distance);
-//     const estimatedCost = calculateEstimatedCost(items, shippingCost, taxRate);
-
-//     const newOrder = new Order({
-//       user: req.user.id,
-//       items,
-//       totalAmount,
-//       estimatedCost,
-//       address,
-//       paymentMethod,
-//       shippingCost,
-//       tax: estimatedCost * taxRate,
-//       distance,
-//     });
-
-//     const savedOrder = await newOrder.save();
-
-//     // Generate Invoice and Send Email
-//     const invoicePath = generateInvoicePDF(savedOrder);
-//     const userEmail = req.user.email;
-//     await sendInvoiceEmail(userEmail, invoicePath);
-
-//     res
-//       .status(201)
-//       .json({ message: "Order placed successfully", order: savedOrder });
-//   } catch (error) {
-//     res
-//       .status(500)
-//       .json({ message: "Failed to place order", error: error.message });
-//   }
-// };
 
 exports.placeOrder = async (req, res) => {
   const {
@@ -325,16 +239,27 @@ function generateInvoicePDF(order) {
 
   // Add content to the PDF
   doc.fontSize(20).text("Invoice", { align: "center" });
-  doc.fontSize(12).text(`Order ID: ${order._id}`);
-  doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`);
-  doc.text(`Shipping Address: ${order.address}`);
-  doc.text(`Status: ${order.status}`);
-  doc.text(`Total Amount: $${order.totalAmount}`);
+  doc.fontSize(12).text(`\nOrder ID: ${order._id}`);
+  doc.text(`\nDate: ${new Date(order.createdAt).toLocaleDateString()}`);
+  doc.text(`\nShipping Address: ${order.address}`);
+  doc.text(`\nStatus: ${order.status}`);
+  doc.text(`\nTotal Amount: ${order.totalAmount.toFixed(2)}`); // Updated to display  symbol
   doc.text("\nItems Purchased:");
+
+  // Loop through items and list them
   order.items.forEach((item) => {
-    doc.text(`- ${item.name} x${item.quantity} = $${item.price}`);
+    doc.text(
+      `- ${item.name} x${item.quantity} = ${(
+        item.price * item.quantity
+      ).toFixed(2)}`
+    ); // Item cost with  symbol
   });
-  doc.text(`\nEstimated Total Cost: $${order.estimatedCost}`);
+
+  // Add estimated total cost, tax, and shipping
+  doc.text(`\nEstimated Total Cost: ${order.estimatedCost.toFixed(2)}`); // Updated to display  symbol
+  doc.text(`\nTax: ${order.tax.toFixed(2)}`); // If tax is part of the order object
+  doc.text(`\nShipping Cost: ${order.shippingCost.toFixed(2)}`); // If shippingCost is part of the order object
+
   doc.end();
 
   return invoicePath;
